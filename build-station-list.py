@@ -56,22 +56,19 @@ led_pin = 21
 GPIO.setup(led_pin, GPIO.OUT)
 GPIO.output(led_pin, 1)
 
-btn_genre_less = 26
-btn_genre_more = 19
-
 print_msg([[20, 0, 'Привет!', font1], [2, 35, 'Ищу  жанры . . .', font1]])
 
 genres_html = urllib.request.urlopen("https://www.internet-radio.com/stations/").read().decode('utf-8')
 genres = re.findall(r'href="/stations/([^/]+)/"', genres_html)
 
-print_msg([[20, 0, 'Привет!', font1], [2, 25, 'Ищу  жанры . . .', font1], [2, 35, 'Ищу   станции . . .', font1]])
+print_msg([[20, 0, 'Привет!', font1], [2, 25, 'Ищу  жанры . . .', font1], [2, 35, 'Ищу  станции . . .', font1]])
 #print_msg([[20, 0, 'Привет!', font1], [2, 10, 'Жанров:   ' + str(len(genres)), font2], [2, 35, 'Ищу   станции . . .', font1]])
 
 radio = dict()
 all_stations = dict()
 
 done_genres = 0
-for genre in genres[0:5]:
+for genre in genres:
     url = "https://www.internet-radio.com/stations/" + genre.replace(' ', '%20') + '/'
     print(url)
     html = urllib.request.urlopen(url).read().decode('utf-8')
@@ -82,7 +79,7 @@ for genre in genres[0:5]:
     genre_stations = []
     for tr in trs:        
         stations = re.findall(r'href="/station/([^/]+)/"', tr)
-        urls = re.findall(r'playlistgenerator/\?u=https?://([^/]+)', tr)
+        urls = re.findall(r'playlistgenerator/\?u=(https?://[^/]+)', tr)
 
         if (len(stations) and len(urls)):
             genre_stations.append([stations[0], urls[0]])
@@ -97,10 +94,11 @@ for genre in genres[0:5]:
     [0, 35, str(status) + ' %', font1]]))
 
 genres = sorted(radio.keys())
-print(genres)
+
 station_names = all_stations.keys()
 stations_count = len(station_names)
 
 print_msg([[20, 0, 'Готово!', font1], [2, 15, 'Жанров:  ' + str(len(genres)), font1], [2, 25, 'Станций:  ' + str(stations_count), font1]])
 
-print(json.dumps(radio))
+with open('stations.json', 'w') as json_file:
+    json.dump(radio, json_file)

@@ -10,9 +10,10 @@ import RPi.GPIO as GPIO
 import urllib.request
 import re
 import time
-import JSON
+import json
+import os
 
-font1 = ImageFont.truetype("Minecraftia-Regular.ttf", 8)
+font1 = ImageFont.truetype("fonts/Minecraftia-Regular.ttf", 8)
 font2 = font1
 
 def print_msg(msg):
@@ -29,8 +30,20 @@ def print_msg(msg):
     disp.image(image)
     disp.display()
 
-def genre_name_msg(name):
-    ret = [[0, 0, "Выбор жанра", font1]]
+def genre_name_msg(name, direction):
+    ret = [[0, 0, "Выбор жанра " + direction, font1]]
+    y = 15
+    if len(name) > 15:
+        for word in name.split():
+            ret.append([0, y, word.title(), font2])
+            y += 9
+    else:
+        ret.append([0, y, name.title(), font2])
+    return ret
+
+def station_name_msg(name):
+    ret = [[0, 0, "Выбор станции", font1],
+           [0, 35, "~" + genres[curr_genre].title() + "~", font1]]
     y = 15
     if len(name) > 15:
         for word in name.split():
@@ -46,7 +59,7 @@ SPI_PORT = 0
 SPI_DEVICE = 0
 
 disp = LCD.PCD8544(DC, RST, spi=SPI.SpiDev(SPI_PORT, SPI_DEVICE, max_speed_hz=4000000))
-disp.begin(contrast=60)
+disp.begin(contrast=200)
 
 disp.clear()
 disp.display()
@@ -56,63 +69,109 @@ led_pin = 21
 GPIO.setup(led_pin, GPIO.OUT)
 GPIO.output(led_pin, 1)
 
-btn_genre_less = 26
-btn_genre_more = 19
-
-print_msg([[20, 0, 'Привет!', font1], [2, 35, 'Ищу  жанры . . .', font1]])
-
-genres_html = urllib.request.urlopen("https://www.internet-radio.com/stations/").read().decode('utf-8')
-genres = re.findall(r'href="/stations/([^/]+)/"', genres_html)
-
-print_msg([[20, 0, 'Привет!', font1], [2, 25, 'Ищу  жанры . . .', font1], [2, 35, 'Ищу   станции . . .', font1]])
-#print_msg([[20, 0, 'Привет!', font1], [2, 10, 'Жанров:   ' + str(len(genres)), font2], [2, 35, 'Ищу   станции . . .', font1]])
-
-radio = dict()
-all_stations = dict()
-
-done_genres = 0
-for genre in genres:
-    url = "https://www.internet-radio.com/stations/" + genre.replace(' ', '%20') + '/'
-    print(url)
-    html = urllib.request.urlopen(url).read().decode('utf-8')
-    stations = re.findall(r'href="/station/([^/]+)/"', html)
-    stations.sort()
-
-    if len(stations):
-        radio[genre] = stations
-        for station in stations:
-            all_stations[station] = 1
-
-    done_genres += 1
-    status = int(100 * done_genres / len(genres))
-    print(print_msg([[20, 0, 'Привет!', font1], [2, 15, 'Ищу  жанры . . .', font1], [2, 25, 'Ищу   станции . . .', font1],
-    [0, 35, str(status) + ' %', font1]]))
-
-genres = sorted(radio.keys())
-
-station_names = all_stations.keys()
-stations_count = len(station_names)
-
-print_msg([[20, 0, 'Готово!', font1], [2, 15, 'Жанров:  ' + str(len(genres)), font1], [2, 25, 'Станций:  ' + str(stations_count), font1]])
-
+btn_genre_less = 19
+btn_genre_more = 26
 GPIO.setup(btn_genre_less, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 GPIO.setup(btn_genre_more, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-curr_genre = -1
+btn_station_less = 6
+btn_station_more = 13
+GPIO.setup(btn_station_less, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(btn_station_more, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
+
+radio = dict()
+stations = dict()
+
+with open('stations.json') as json_file:
+    radio = json.load(json_file)
+
+genres = sorted(radio.keys())
+
+for genre in genres:
+    genre_stations = radio[genre]
+    for station in genre_stations:
+        stations[station[0]] = station[1]
+
+print_msg([[20, 0, 'Готово!', font1], 
+           [2, 15, 'Жанров:  ' + str(len(genres)), font1],
+           [2, 25, 'Станций:  ' + str(len(stations)), font1]
+         ])
+
+curr_genre = 0
+curr_station = 0
+
+idle_time = 0
+idle_max = 5
+is_in_selection = 0
+station_chosen = 0
+stations_in_genre = radio[genres[curr_genre]]
 
 while 1:
     genre_less = GPIO.input(btn_genre_less);
-    if genre_less == 0:        
+    if genre_less == 0:
+        idle_time = 0
+        idle_max = 30
+        is_in_selection = 0
+
         curr_genre -= 1
         if curr_genre < 0:
             curr_genre = len(genres) - 1
-        print_msg(genre_name_msg(genres[curr_genre]))
+        print_msg(genre_name_msg(genres[curr_genre], '←'))
+        curr_station = 0
+        stations_in_genre = radio[genres[curr_genre]]
 
     genre_more = GPIO.input(btn_genre_more);
-    if genre_more == 0:        
+    if genre_more == 0:
+        idle_time = 0
+        idle_max = 30
+        is_in_selection = 0
+
         curr_genre += 1
         if curr_genre >= len(genres):
             curr_genre = 0
-        print_msg(genre_name_msg(genres[curr_genre]))
+        print_msg(genre_name_msg(genres[curr_genre], '→'))
+        curr_station = 0
+        stations_in_genre = radio[genres[curr_genre]]
 
-    time.sleep(0.1)
+    station_less = GPIO.input(btn_station_less);
+    if station_less == 0:
+        idle_time = 0
+        idle_max = 5
+        is_in_selection = 1 
+
+        curr_station -= 1
+        if curr_station < 0:
+            curr_station = len(stations_in_genre) - 1
+        print_msg(station_name_msg(stations_in_genre[curr_station][0]))
+
+    station_more = GPIO.input(btn_station_more);
+    if station_more == 0:
+        idle_time = 0
+        idle_max = 5
+        is_in_selection = 1
+
+        curr_station += 1
+        if curr_station >= len(stations_in_genre):
+            curr_station = 0
+        print_msg(station_name_msg(stations_in_genre[curr_station][0]))
+
+    time.sleep(0.3)
+    idle_time += 1
+
+    if idle_time > idle_max:   
+        idle_time = 0
+        if station_chosen:
+            print_msg([
+                [0, 0, 'Вы слушаете', font1],
+                [0, 15, stations_in_genre[curr_station][0].title(), font1],
+                #[0, 35, genres[curr_genre].title(), font1]
+            ])
+
+        if is_in_selection:
+            is_in_selection = 0
+            station_chosen = 1
+
+            print("/usr/bin/mplayer " + stations_in_genre[curr_station][1])
+            os.system("/usr/bin/killall mplayer");
+            os.system("/usr/bin/mplayer -ao alsa:device=hw=1,0 " + stations_in_genre[curr_station][1] + " & ")

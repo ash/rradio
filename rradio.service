@@ -1,0 +1,8 @@
+[Unit]
+Description="RRadio service"
+
+[Service]
+ExecStart=/home/pi/rradio/rradio.sh
+
+[Install]
+WantedBy=multi-user.target

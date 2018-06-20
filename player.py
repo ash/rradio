@@ -107,6 +107,23 @@ is_in_selection = 0
 station_chosen = 0
 stations_in_genre = radio[genres[curr_genre]]
 
+state_file = 'rradio.json'
+
+if os.path.exists(state_file):
+    print('???')
+    with open(state_file) as json_file:
+        state = json.load(json_file)
+        curr_genre = state["genre"]
+        curr_station = state["station"]
+        stations_in_genre = radio[genres[curr_genre]]
+
+        print_msg([
+            [0, 0, 'Вы слушаете', font1],
+            [0, 15, stations_in_genre[curr_station][0].title(), font1]
+        ])
+        time.sleep(2)
+        os.system("/usr/bin/mplayer -ao alsa:device=hw=1,0 " + stations_in_genre[curr_station][1] + " & ")
+
 while 1:
     genre_less = GPIO.input(btn_genre_less);
     if genre_less == 0:
@@ -156,7 +173,7 @@ while 1:
             curr_station = 0
         print_msg(station_name_msg(stations_in_genre[curr_station][0]))
 
-    time.sleep(0.3)
+    time.sleep(0.2)
     idle_time += 1
 
     if idle_time > idle_max:   
@@ -175,3 +192,7 @@ while 1:
             print("/usr/bin/mplayer " + stations_in_genre[curr_station][1])
             os.system("/usr/bin/killall mplayer");
             os.system("/usr/bin/mplayer -ao alsa:device=hw=1,0 " + stations_in_genre[curr_station][1] + " & ")
+
+            state = {"genre": curr_genre, "station": curr_station}
+            with open(state_file, 'w') as json_file:
+               json.dump(state, json_file)

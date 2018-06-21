@@ -106,7 +106,9 @@ curr_station = 0
 
 idle_time = 0
 light_time = 0
+duty_cycle = 100
 idle_max = 5
+delay = 0.2
 is_in_selection = 0
 station_chosen = 0
 stations_in_genre = radio[genres[curr_genre]]
@@ -114,7 +116,6 @@ stations_in_genre = radio[genres[curr_genre]]
 state_file = 'rradio.json'
 
 if os.path.exists(state_file):
-    print('???')
     with open(state_file) as json_file:
         state = json.load(json_file)
         curr_genre = state["genre"]
@@ -128,68 +129,84 @@ if os.path.exists(state_file):
         time.sleep(2)
         os.system("/usr/bin/mplayer -ao alsa:device=hw=1,0 " + stations_in_genre[curr_station][1] + " & ")
 
-while 1:
-    genre_less = GPIO.input(btn_genre_less);
+while 1:    
+    genre_less = GPIO.input(btn_genre_less)
     if genre_less == 0:
-        idle_time = 0
-        idle_max = 30
-        is_in_selection = 0
+        genre_less = GPIO.input(btn_genre_less)
+        if genre_less == 0:
+            idle_time = 0
+            idle_max = 30
+            is_in_selection = 0
 
-        light_time = 0
-        light.start(100)
+            light_time = 0
+            if (duty_cycle < 20):
+                duty_cycle = 100
+                light.start(duty_cycle)
+            else:
+                curr_genre -= 1
+                if curr_genre < 0:
+                    curr_genre = len(genres) - 1
+                print_msg(genre_name_msg(genres[curr_genre], '←'))
+                curr_station = 0
+                stations_in_genre = radio[genres[curr_genre]]
 
-        curr_genre -= 1
-        if curr_genre < 0:
-            curr_genre = len(genres) - 1
-        print_msg(genre_name_msg(genres[curr_genre], '←'))
-        curr_station = 0
-        stations_in_genre = radio[genres[curr_genre]]
-
-    genre_more = GPIO.input(btn_genre_more);
+    genre_more = GPIO.input(btn_genre_more)
     if genre_more == 0:
-        idle_time = 0
-        idle_max = 30
-        is_in_selection = 0
+        genre_more = GPIO.input(btn_genre_more)
+        if genre_more == 0:
+            idle_time = 0
+            idle_max = 30
+            is_in_selection = 0
 
-        light_time = 0
-        light.start(100)
+            light_time = 0
+            if (duty_cycle < 20):
+                duty_cycle = 100
+                light.start(duty_cycle)
+            else:
+                curr_genre += 1
+                if curr_genre >= len(genres):
+                    curr_genre = 0
+                print_msg(genre_name_msg(genres[curr_genre], '→'))
+                curr_station = 0
+                stations_in_genre = radio[genres[curr_genre]]
 
-        curr_genre += 1
-        if curr_genre >= len(genres):
-            curr_genre = 0
-        print_msg(genre_name_msg(genres[curr_genre], '→'))
-        curr_station = 0
-        stations_in_genre = radio[genres[curr_genre]]
-
-    station_less = GPIO.input(btn_station_less);
+    station_less = GPIO.input(btn_station_less)
     if station_less == 0:
-        idle_time = 0
-        idle_max = 5
-        is_in_selection = 1
+        station_less = GPIO.input(btn_station_less)
+        if station_less == 0:
+            idle_time = 0
+            idle_max = 5
+            is_in_selection = 1
 
-        light_time = 0
-        light.start(100)
+            light_time = 0
+            if (duty_cycle < 20):
+                duty_cycle = 100
+                light.start(duty_cycle)
+            else:
+                curr_station -= 1
+                if curr_station < 0:
+                    curr_station = len(stations_in_genre) - 1
+                print_msg(station_name_msg(stations_in_genre[curr_station][0]))
 
-        curr_station -= 1
-        if curr_station < 0:
-            curr_station = len(stations_in_genre) - 1
-        print_msg(station_name_msg(stations_in_genre[curr_station][0]))
-
-    station_more = GPIO.input(btn_station_more);
+    station_more = GPIO.input(btn_station_more)
     if station_more == 0:
-        idle_time = 0
-        idle_max = 5
-        is_in_selection = 1
-        
-        light_time = 0
-        light.start(100)
+        station_more = GPIO.input(btn_station_more)
+        if station_more == 0:
+            idle_time = 0
+            idle_max = 5
+            is_in_selection = 1
+            
+            light_time = 0
+            if (duty_cycle < 20):
+                duty_cycle = 100
+                light.start(duty_cycle)
+            else:
+                curr_station += 1
+                if curr_station >= len(stations_in_genre):
+                    curr_station = 0
+                print_msg(station_name_msg(stations_in_genre[curr_station][0]))
 
-        curr_station += 1
-        if curr_station >= len(stations_in_genre):
-            curr_station = 0
-        print_msg(station_name_msg(stations_in_genre[curr_station][0]))
-
-    time.sleep(0.2)
+    time.sleep(delay)
     idle_time += 1
     light_time += 1
 
@@ -214,12 +231,12 @@ while 1:
             with open(state_file, 'w') as json_file:
                json.dump(state, json_file)
 
-    if light_time > idle_max * 3:        
-        duty = 100 - (light_time - idle_max * 3)
-        if duty > 100:
-            duty = 100
-        elif duty < 0:
-            duty = 0
+    if light_time > idle_max * 3:  
+        duty_cycle = 100 - (light_time - idle_max * 3)
+        if duty_cycle > 100:
+            duty_cycle = 100
+        elif duty_cycle < 0:
+            duty_cycle = 0
             light.start(0)
-        elif duty > 0:
-            light.start(duty)        
+        elif duty_cycle > 0:
+            light.start(duty_cycle)        

@@ -141,7 +141,7 @@ while 1:
             light_time = 0
             if (duty_cycle < 20):
                 duty_cycle = 100
-                light.start(duty_cycle)
+                light.ChangeDutyCycle(duty_cycle)
             else:
                 curr_genre -= 1
                 if curr_genre < 0:
@@ -161,7 +161,7 @@ while 1:
             light_time = 0
             if (duty_cycle < 20):
                 duty_cycle = 100
-                light.start(duty_cycle)
+                light.ChangeDutyCycle(duty_cycle)
             else:
                 curr_genre += 1
                 if curr_genre >= len(genres):
@@ -176,13 +176,13 @@ while 1:
         if station_less == 0:
             idle_time = 0
             idle_max = 5
-            is_in_selection = 1
 
             light_time = 0
             if (duty_cycle < 20):
                 duty_cycle = 100
-                light.start(duty_cycle)
+                light.ChangeDutyCycle(duty_cycle)
             else:
+                is_in_selection = 1
                 curr_station -= 1
                 if curr_station < 0:
                     curr_station = len(stations_in_genre) - 1
@@ -194,13 +194,13 @@ while 1:
         if station_more == 0:
             idle_time = 0
             idle_max = 5
-            is_in_selection = 1
             
             light_time = 0
             if (duty_cycle < 20):
                 duty_cycle = 100
-                light.start(duty_cycle)
+                light.ChangeDutyCycle(duty_cycle)
             else:
+                is_in_selection = 1
                 curr_station += 1
                 if curr_station >= len(stations_in_genre):
                     curr_station = 0
@@ -231,12 +231,12 @@ while 1:
             with open(state_file, 'w') as json_file:
                json.dump(state, json_file)
 
-    if light_time > idle_max * 3:  
-        duty_cycle = 100 - (light_time - idle_max * 3)
+    if light_time > idle_max * 6:  
+        duty_cycle = 100 - (light_time - idle_max * 6) * 50
         if duty_cycle > 100:
             duty_cycle = 100
         elif duty_cycle < 0:
             duty_cycle = 0
-            light.start(0)
+            light.ChangeDutyCycle(0)
         elif duty_cycle > 0:
-            light.start(duty_cycle)        
+            light.ChangeDutyCycle(duty_cycle)        

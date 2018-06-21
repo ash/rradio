@@ -69,6 +69,9 @@ led_pin = 21
 GPIO.setup(led_pin, GPIO.OUT)
 GPIO.output(led_pin, 1)
 
+light = GPIO.PWM(led_pin, 300)
+light.start(100)
+
 btn_genre_less = 19
 btn_genre_more = 26
 GPIO.setup(btn_genre_less, GPIO.IN, pull_up_down=GPIO.PUD_UP)
@@ -102,6 +105,7 @@ curr_genre = 0
 curr_station = 0
 
 idle_time = 0
+light_time = 0
 idle_max = 5
 is_in_selection = 0
 station_chosen = 0
@@ -131,6 +135,9 @@ while 1:
         idle_max = 30
         is_in_selection = 0
 
+        light_time = 0
+        light.start(100)
+
         curr_genre -= 1
         if curr_genre < 0:
             curr_genre = len(genres) - 1
@@ -144,6 +151,9 @@ while 1:
         idle_max = 30
         is_in_selection = 0
 
+        light_time = 0
+        light.start(100)
+
         curr_genre += 1
         if curr_genre >= len(genres):
             curr_genre = 0
@@ -155,7 +165,10 @@ while 1:
     if station_less == 0:
         idle_time = 0
         idle_max = 5
-        is_in_selection = 1 
+        is_in_selection = 1
+
+        light_time = 0
+        light.start(100)
 
         curr_station -= 1
         if curr_station < 0:
@@ -167,6 +180,9 @@ while 1:
         idle_time = 0
         idle_max = 5
         is_in_selection = 1
+        
+        light_time = 0
+        light.start(100)
 
         curr_station += 1
         if curr_station >= len(stations_in_genre):
@@ -175,6 +191,7 @@ while 1:
 
     time.sleep(0.2)
     idle_time += 1
+    light_time += 1
 
     if idle_time > idle_max:   
         idle_time = 0
@@ -196,3 +213,13 @@ while 1:
             state = {"genre": curr_genre, "station": curr_station}
             with open(state_file, 'w') as json_file:
                json.dump(state, json_file)
+
+    if light_time > idle_max * 3:        
+        duty = 100 - (light_time - idle_max * 3)
+        if duty > 100:
+            duty = 100
+        elif duty < 0:
+            duty = 0
+            light.start(0)
+        elif duty > 0:
+            light.start(duty)        
